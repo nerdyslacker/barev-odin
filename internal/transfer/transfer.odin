@@ -156,6 +156,33 @@ receive_offer :: proc(manager: ^Manager, peer_id: u64, filename: string, size: i
 	return id, .None
 }
 
+accept_to :: proc(manager: ^Manager, id: u64, path: string, overwrite: bool = false) -> Error {
+	value := find(manager, id)
+	if value == nil || value.direction != .Incoming || value.state != .Offered {
+		return .Invalid
+	}
+	flags := os.File_Flags{.Write, .Create, .Excl}
+	if overwrite {
+		flags = {.Write, .Create, .Trunc}
+	}
+	file, open_err := os.open(path, flags, os.perm(0o600))
+	if open_err != nil {
+		if !overwrite && os.exists(path) {
+			return .Exists
+		}
+		return .IO
+	}
+	delete(value.path)
+	value.path = strings.clone(path)
+	value.file = file
+	value.state = .Accepted
+	if value.size == 0 {
+		close_file(value)
+		value.state = .Completed
+	}
+	return .None
+}
+
 accept :: proc(manager: ^Manager, id: u64, directory: string) -> Error {
 	value := find(manager, id)
 	if value == nil || value.direction != .Incoming || value.state != .Offered {
@@ -165,19 +192,8 @@ accept :: proc(manager: ^Manager, id: u64, directory: string) -> Error {
 	if join_err != nil {
 		return .IO
 	}
-	file, open_err := os.open(path, os.File_Flags{.Write, .Create, .Excl}, os.perm(0o600))
-	if open_err != nil {
-		delete(path)
-		return .Exists
-	}
-	value.path = path
-	value.file = file
-	value.state = .Accepted
-	if value.size == 0 {
-		close_file(value)
-		value.state = .Completed
-	}
-	return .None
+	defer delete(path)
+	return accept_to(manager, id, path)
 }
 
 begin_outgoing :: proc(manager: ^Manager, id: u64) -> Error {

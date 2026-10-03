@@ -373,6 +373,25 @@ client_accept_file :: proc(client: ^Client, transfer_id: u64, directory: string)
 	return .None
 }
 
+client_accept_file_to :: proc(client: ^Client, transfer_id: u64, path: string, overwrite: bool = false) -> Error {
+	value := transfer.find(&client.transfers, transfer_id)
+	if value == nil || value.direction != .Incoming {
+		return .Invalid_Options
+	}
+	peer_index := find_peer_slot(client^, value.peer_id)
+	if peer_index < 0 {
+		return .Unknown_Peer
+	}
+	if accept_err := transfer.accept_to(&client.transfers, transfer_id, path, overwrite); accept_err != .None {
+		return transfer_error(accept_err)
+	}
+	if send_err := session.send_transfer_accept(&client.engine, peer_index, value.request_id); send_err != .None {
+		_ = transfer.cancel(&client.transfers, transfer_id)
+		return session_error(send_err)
+	}
+	return .None
+}
+
 client_reject_file :: proc(client: ^Client, transfer_id: u64) -> Error {
 	value := transfer.find(&client.transfers, transfer_id)
 	if value == nil || value.direction != .Incoming {

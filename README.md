@@ -12,7 +12,7 @@ Barev connects peers directly without a central server, using one TCP connection
 - **Transport:** nonblocking TCP over IPv6
 - **Security:** transport encryption is provided by Yggdrasil; peer names are not cryptographic identities
 
-The library supports messages, presence and status text, chat states, XHTML-IM fallback, avatars, contact files, ping/pong, and explicitly accepted file transfers.
+The library supports messages, presence and status text, chat states, XHTML-IM fallback, avatars, contact files, ping/pong, and explicitly accepted file transfers. Incoming transfers can target either a directory or an explicit file path, with overwrite disabled unless the caller opts in.
 
 ## Project structure
 
