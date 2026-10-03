@@ -279,8 +279,8 @@ direct_child_text :: proc(data: []u8, opening_end, finish: int, wanted: string, 
 	return text, true, err
 }
 
-decode_stanza :: proc(xml: string, inherited_namespace := CLIENT_NAMESPACE, allocator := context.allocator) -> (stanza: Stanza, err: Decode_Error) {
-	if xml_err := xmlstream.validate_stanza(xml); xml_err != .None {
+decode_stanza :: proc(xml: string, inherited_namespace := CLIENT_NAMESPACE, max_stanza := xmlstream.DEFAULT_MAX_STANZA, allocator := context.allocator) -> (stanza: Stanza, err: Decode_Error) {
+	if xml_err := xmlstream.validate_stanza(xml, max_stanza); xml_err != .None {
 		return {}, .Malformed_XML
 	}
 	data := transmute([]u8)xml

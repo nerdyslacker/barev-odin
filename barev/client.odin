@@ -41,11 +41,14 @@ session_error :: proc(err: session.Error) -> Error {
 
 @(private)
 valid_options :: proc(options: Client_Options) -> bool {
+	max_avatar_payload := (options.max_avatar_bytes + 2) / 3 * 4
 	return len(options.nick) > 0 && len(options.bind_ipv6) > 0 &&
 	       options.connect_timeout > 0 && options.ping_interval > 0 && options.ping_timeout > 0 &&
 	       options.max_ping_failures > 0 && options.max_stanza_bytes > 0 &&
 	       options.max_receive_bytes >= options.max_stanza_bytes && options.max_queued_bytes > 0 &&
 	       options.max_queued_events > 0 && options.max_avatar_bytes > 0 &&
+	       options.max_stanza_bytes >= max_avatar_payload + 4096 &&
+	       options.max_queued_bytes >= max_avatar_payload + 4096 &&
 	       options.max_transfer_bytes > 0 && options.max_concurrent_transfers > 0
 }
 

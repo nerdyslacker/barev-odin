@@ -308,14 +308,25 @@ close_candidate :: proc(engine: ^Engine, candidate_index: int, notify: bool) {
 		return
 	}
 	peer_index := candidate.peer_index
+	was_active := peer_index >= 0 && peer_index < len(engine.peers) &&
+		engine.peers[peer_index].active == candidate_index
 	destroy_candidate(candidate)
-	if peer_index >= 0 && peer_index < len(engine.peers) && engine.peers[peer_index].active == candidate_index {
+	if peer_index >= 0 && peer_index < len(engine.peers) {
 		peer := &engine.peers[peer_index]
-		peer.active = -1
-		peer.state = .Disconnected
-		peer.presence = .Offline
-		if notify {
-			emit(engine, .Disconnected, peer_index)
+		has_other := false
+		for other in engine.candidates {
+			if other.socket.valid && other.peer_index == peer_index {
+				has_other = true
+				break
+			}
+		}
+		if was_active || peer.active < 0 && !has_other {
+			peer.active = -1
+			peer.state = .Disconnected
+			peer.presence = .Offline
+			if notify {
+				emit(engine, .Disconnected, peer_index)
+			}
 		}
 	}
 }
@@ -384,7 +395,7 @@ handle_stanza :: proc(engine: ^Engine, candidate_index: int, event: xmlstream.Ev
 	if candidate.peer_index < 0 || !candidate.online_emitted {
 		return .Protocol
 	}
-	stanza, decode_err := protocol.decode_stanza(event.xml, event.namespace)
+	stanza, decode_err := protocol.decode_stanza(event.xml, event.namespace, engine.max_stanza)
 	defer protocol.destroy_stanza(&stanza)
 	if decode_err != .None {
 		return .Protocol
